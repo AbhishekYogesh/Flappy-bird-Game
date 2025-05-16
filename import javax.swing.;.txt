@@ -1,0 +1,136 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+
+public class FlappyBirdGame extends JPanel implements ActionListener, KeyListener {
+
+    Timer timer;
+    int birdY = 250;  // Bird's initial position
+    int velocity = 0; // Velocity of the bird (gravity)
+    int gravity = 1;  // Gravity strength
+    int score = 0;    // Player score
+    boolean gameOver = false; // Game over flag
+
+    ArrayList<Pipe> pipes = new ArrayList<>();
+    int pipeDelay = 0;
+
+    public FlappyBirdGame() {
+        this.setFocusable(true);
+        this.addKeyListener(this);
+        timer = new Timer(20, this); // 50 FPS
+        timer.start();
+        pipes.add(new Pipe(400)); // Add the first pipe to the list
+    }
+
+    // Method to draw everything on the screen
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        // Background
+        g.setColor(Color.cyan);
+        g.fillRect(0, 0, 400, 600);
+
+        // Ground
+        g.setColor(Color.orange);
+        g.fillRect(0, 550, 400, 50);
+
+        // Bird (represented by a red circle)
+        g.setColor(Color.red);
+        g.fillOval(100, birdY, 20, 20);
+
+        // Pipes (green color for pipes)
+        g.setColor(Color.green);
+        for (Pipe pipe : pipes) {
+            g.fillRect(pipe.x, 0, 50, pipe.topHeight);
+            g.fillRect(pipe.x, pipe.topHeight + 150, 50, 600);
+        }
+
+        // Display score
+        g.setColor(Color.black);
+        g.setFont(new Font("Arial", Font.BOLD, 20));
+        g.drawString("Score: " + score, 10, 25);
+
+        // Game Over message
+        if (gameOver) {
+            g.setColor(Color.RED);
+            g.setFont(new Font("Arial", Font.BOLD, 40));
+            g.drawString("Game Over", 100, 300);
+        }
+    }
+
+    // Action performed every 20 milliseconds
+    public void actionPerformed(ActionEvent e) {
+        if (gameOver) return;
+
+        velocity += gravity; // Apply gravity to velocity
+        birdY += velocity;   // Apply velocity to bird's position
+
+        pipeDelay++; // Increment pipe delay for generating new pipes
+        if (pipeDelay > 90) {
+            pipes.add(new Pipe(400)); // Add new pipe
+            pipeDelay = 0;            // Reset pipe delay
+        }
+
+        // Move pipes and check for collisions
+        for (int i = 0; i < pipes.size(); i++) {
+            Pipe pipe = pipes.get(i);
+            pipe.x -= 5; // Move pipe to the left
+
+            // Check for collision
+            if (pipe.x < 120 && pipe.x + 50 > 100) {
+                if (birdY < pipe.topHeight || birdY + 20 > pipe.topHeight + 150) {
+                    gameOver = true;
+                    timer.stop(); // Stop the game when collision happens
+                }
+            }
+
+            // Update score when passing a pipe
+            if (pipe.x + 50 == 100) score++;
+
+            // Remove pipes that are off-screen
+            if (pipe.x < -50) pipes.remove(i);
+        }
+
+        // Check for bird hitting ground or going off-screen
+        if (birdY > 530 || birdY < 0) {
+            gameOver = true;
+            timer.stop(); // Stop the game if the bird hits the ground or flies off-screen
+        }
+
+        repaint(); // Repaint the screen
+    }
+
+    // Key event to make the bird jump when spacebar is pressed
+    public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_SPACE && !gameOver) {
+            velocity = -10; // Make the bird jump (negative velocity)
+        }
+    }
+
+    public void keyReleased(KeyEvent e) {}
+    public void keyTyped(KeyEvent e) {}
+
+    // Main method to run the game
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("Flappy Bird");
+        FlappyBirdGame gamePanel = new FlappyBirdGame();
+
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(400, 600);
+        frame.setResizable(false);
+        frame.add(gamePanel);
+        frame.setVisible(true);
+    }
+
+    // Pipe class for managing pipes' position and height
+    public static class Pipe {
+        int x;
+        int topHeight;
+
+        public Pipe(int startX) {
+            this.x = startX;
+            this.topHeight = (int)(Math.random() * 200 + 100); // Random height between 100-300
+        }
+    }
+}
